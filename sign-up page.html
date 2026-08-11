@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Healthify | Sign Up</title>
+<link rel="icon" type="image/png" href="logo.png">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- Bootstrap -->
+<link rel="stylesheet" href="css/bootstrap.min.css">
+
+<!-- Particles -->
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    background: #0d0d0d;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0f0f0f, #2b2b2b);
+    z-index: -1;
+}
+
+.signup-container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.signup-box {
+    width: 100%;
+    max-width: 420px;
+    padding: 30px;
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #555;
+}
+
+legend {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+input {
+    background: transparent !important;
+    border: 1px solid #777 !important;
+    color: white !important;
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+.btn-custom {
+    width: 100%;
+    background: #222;
+    color: white;
+    border: 1px solid #777;
+}
+
+.btn-custom:hover {
+    background: #333;
+}
+</style>
+</head>
+
+<body>
+
+<div id="particles-js"></div>
+
+<div class="signup-container">
+<form class="signup-box" onsubmit="signup(event)">
+<fieldset>
+<div class="text-center mb-3">
+  <img src="logo.png" width="55" height="55" class="rounded-circle" alt="Healthify Logo">
+</div>
+<legend class="text-center">Sign Up</legend>
+
+<label>Name</label>
+<input type="text" id="name" class="form-control" placeholder="Enter name" required>
+
+<label>Date of Birth</label>
+<input type="date" id="dob" class="form-control" required>
+
+<label>Email (must be Gmail)</label>
+<input type="email" id="email" class="form-control" placeholder="example@gmail.com" required>
+
+<label>Mobile Number (+91)</label>
+<input type="text" id="mobile" class="form-control" placeholder="+91XXXXXXXXXX" required>
+
+<label>Password</label>
+<input type="password" id="password" class="form-control" placeholder="Password" required>
+
+<label>Confirm Password</label>
+<input type="password" id="confirmPassword" class="form-control" placeholder="Confirm Password" required>
+
+<br>
+
+<button type="submit" class="btn btn-custom mb-2">Sign Up</button>
+<button type="reset" class="btn btn-outline-light w-100">Reset</button>
+
+<p id="message" class="text-center mt-3"></p>
+
+</fieldset>
+</form>
+</div>
+
+<!-- Firebase Config -->
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAYzmBXm6U3Mwrq1vXCBk9Nlt85ydVGQpc",
+  authDomain: "healtify-cd401.firebaseapp.com",
+  projectId: "healtify-cd401",
+  storageBucket: "healtify-cd401.firebasestorage.app",
+  messagingSenderId: "1035292624000",
+  appId: "1:1035292624000:web:a6924371785609d48c9265"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+
+<!-- Signup Logic -->
+<script>
+function signup(event) {
+    event.preventDefault();
+
+    const name = document.getElementById("name").value.trim();
+    const dob = document.getElementById("dob").value;
+    const email = document.getElementById("email").value.trim();
+    const mobile = document.getElementById("mobile").value.trim();
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+    const message = document.getElementById("message");
+
+    message.style.color = "red";
+
+    // Gmail validation
+    if (!email.endsWith("@gmail.com")) {
+        message.innerText = "Email must be @gmail.com";
+        return;
+    }
+
+    // Mobile validation +91 + 10 digits
+    if (!/^\+91[6-9]\d{9}$/.test(mobile)) {
+        message.innerText = "Mobile must be +91 followed by 10 digits";
+        return;
+    }
+
+    // Password rules
+    if (!/^[A-Z]/.test(password)) {
+        message.innerText = "Password must start with a capital letter";
+        return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+        message.innerText = "Password must contain a number";
+        return;
+    }
+
+    if (!/[!@#$%^&*]/.test(password)) {
+        message.innerText = "Password must contain a special character";
+        return;
+    }
+
+    if (password.length < 8 || password.length > 12) {
+        message.innerText = "Password must be 8–12 characters long";
+        return;
+    }
+
+    // Confirm Password
+    if (password !== confirmPassword) {
+        message.innerText = "Passwords do not match";
+        return;
+    }
+
+    // Save to Firebase Firestore
+    db.collection("users").add({
+        name,
+        dob,
+        email,
+        mobile,
+        password,
+        createdAt: new Date()
+    })
+    .then(() => {
+        message.style.color = "lightgreen";
+        message.innerText = "Signup Successful!";
+        document.querySelector("form").reset();
+    })
+    .catch((error) => {
+        message.innerText = "Error: " + error.message;
+    });
+}
+</script>
+
+<!-- Particles -->
+<script>
+particlesJS("particles-js", {
+particles: {
+number: { value: 70 },
+color: { value: "#ffffff" },
+shape: { type: "circle" },
+opacity: { value: 0.4 },
+size: { value: 3 },
+line_linked: {
+enable: true,
+distance: 150,
+color: "#aaaaaa",
+opacity: 0.3,
+width: 1
+},
+move: { enable: true, speed: 1.2 }
+},
+interactivity: {
+events: { onhover: { enable: true, mode: "grab" } }
+},
+retina_detect: true
+});
+</script>
+
+</body>
+</html>

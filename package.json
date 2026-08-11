@@ -1,0 +1,21 @@
+{
+  "name": "healthify-fsd-project",
+  "version": "1.0.0",
+  "description": "Healthify - Hospital & Healthcare Management System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "healthify",
+    "hospital",
+    "management",
+    "healthcare"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "firebase": "^12.17.1"
+  }
+}

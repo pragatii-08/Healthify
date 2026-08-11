@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Healthify | Labs</title>
+<link rel="icon" type="image/png" href="logo.png">
+
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    background: #0d0d0d;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.navbar {
+    background: rgba(0,0,0,0.95);
+    border-bottom: 1px solid #444;
+}
+
+/* ✅ FILTER BLACK COLOR */
+.filter-select {
+    background: #000;
+    border: 1px solid #fff;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 12px;
+}
+
+.filter-select option {
+    background: #000;
+    color: #fff;
+}
+
+/* LAB ROW */
+.lab-row {
+    display: flex;
+    gap: 18px;
+    overflow-x: auto;
+    padding: 25px;
+}
+
+/* ✅ SAME SIZE LAB BLOCKS */
+.lab-mini {
+    width: 240px;
+    height: 180px;
+    flex: 0 0 auto;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.lab-mini:hover {
+    transform: scale(1.05);
+    border-color: #00cfff;
+}
+
+.rating {
+    color: gold;
+    font-weight: bold;
+}
+
+.profile-view {
+    display: none;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.profile-card {
+    max-width: 600px;
+    margin: auto;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 18px;
+    padding: 25px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="particles-js"></div>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-dark px-3 d-flex justify-content-between">
+<span class="navbar-brand fw-bold d-flex align-items-center gap-2">
+  <img src="logo.png" width="35" height="35" class="rounded-circle" alt="Healthify Logo">
+  <span>🧪 Labs</span>
+</span>
+
+<div class="d-flex gap-2">
+<select id="areaFilter" class="filter-select" onchange="applyFilters()">
+  <option value="all">📍 All Areas</option>
+</select>
+
+<select id="ratingFilter" class="filter-select" onchange="applyFilters()">
+  <option value="high">⭐ High → Low</option>
+  <option value="low">⭐ Low → High</option>
+</select>
+</div>
+</nav>
+
+<!-- LAB LIST -->
+<div id="labList" class="lab-row"></div>
+
+<!-- PROFILE VIEW -->
+<div id="profileView" class="profile-view">
+  <div id="profileCard" class="profile-card"></div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAYzmBXm6U3Mwrq1vXCBk9Nlt85ydVGQpc",
+  authDomain: "healtify-cd401.firebaseapp.com",
+  projectId: "healtify-cd401"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const defaultLabs = [
+  { id: "lab1", name: "Metropolis Healthcare Lab", contact: "+919911122233", email: "contact@metropolislab.com", area: "Andheri West, Mumbai", coordinates: "19.1197, 72.8464", rating: 4.8, tests: "Blood Test, Lipid Profile, Thyroid Test, CBC" },
+  { id: "lab2", name: "Thyrocare Diagnostic Center", contact: "+919922233344", email: "info@thyrocarelab.com", area: "Connaught Place, New Delhi", coordinates: "28.6315, 77.2167", rating: 4.7, tests: "Diabetes Screen, Vitamin Profile, Liver Function Test" },
+  { id: "lab3", name: "Dr. Lal PathLabs", contact: "+919933344455", email: "support@lalpathlabs.com", area: "Koramangala, Bengaluru", coordinates: "12.9352, 77.6245", rating: 4.9, tests: "Full Body Checkup, Kidney Function, CBC, Urine Test" },
+  { id: "lab4", name: "SRL Diagnostics", contact: "+919944455566", email: "care@srl.com", area: "Banjara Hills, Hyderabad", coordinates: "17.4156, 78.4347", rating: 4.6, tests: "RT-PCR, Cardiac Markers, Hemogram, Blood Sugar" },
+  { id: "lab5", name: "Suburban Diagnostics", contact: "+919955566677", email: "help@suburbandiagnostics.com", area: "Shivajinagar, Pune", coordinates: "18.5308, 73.8474", rating: 4.8, tests: "Ultrasound, ECG, X-Ray, Comprehensive Metabolic Panel" }
+];
+
+let labs = [];
+let filteredLabs = [];
+let selectedLab = null;
+
+// LOAD LABS
+async function loadLabs() {
+  labs = [];
+  try {
+    const snap = await getDocs(collection(db, "labs"));
+    snap.forEach(doc => labs.push({ id: doc.id, ...doc.data() }));
+
+    const snap2 = await getDocs(collection(db, "lab"));
+    snap2.forEach(doc => labs.push({ id: doc.id, ...doc.data() }));
+
+    const snap3 = await getDocs(collection(db, "newlab"));
+    snap3.forEach(doc => labs.push({ id: doc.id, ...doc.data() }));
+  } catch (err) {
+    console.warn("Firestore fallback to default labs:", err);
+  }
+
+  if (!labs || labs.length === 0) {
+    labs = [...defaultLabs];
+  }
+
+  let areaSet = new Set();
+  labs.forEach(lab => {
+    if (lab.area) areaSet.add(lab.area);
+  });
+
+  populateAreaFilter([...areaSet]);
+  applyFilters();
+}
+
+function populateAreaFilter(areas) {
+  const select = document.getElementById("areaFilter");
+  select.innerHTML = '<option value="all">📍 All Areas</option>';
+  areas.forEach(area => {
+    select.innerHTML += `<option value="${area}">${area}</option>`;
+  });
+}
+
+window.applyFilters = () => {
+  const area = document.getElementById("areaFilter").value;
+  const ratingOrder = document.getElementById("ratingFilter").value;
+
+  filteredLabs = labs.filter(l => {
+    return area === "all" || l.area === area;
+  });
+
+  filteredLabs.sort((a, b) => 
+    ratingOrder === "high" ? (b.rating || 0) - (a.rating || 0) : (a.rating || 0) - (b.rating || 0)
+  );
+
+  renderLabs();
+};
+
+function renderLabs() {
+  const list = document.getElementById("labList");
+  list.innerHTML = "";
+
+  list.style.display = "flex";
+  document.getElementById("profileView").style.display = "none";
+
+  filteredLabs.forEach((l, i) => {
+    list.innerHTML += `
+      <div class="lab-mini" onclick="openProfile(${i})">
+        <h5>${l.name || "No Name"}</h5>
+        <p class="rating">⭐ ${l.rating || 0}</p>
+        <small>📍 ${l.area || "-"}</small>
+      </div>
+    `;
+  });
+}
+
+window.openProfile = (i) => {
+  selectedLab = filteredLabs[i];
+  document.getElementById("labList").style.display = "none";
+  document.getElementById("profileView").style.display = "block";
+  renderProfile();
+};
+
+function renderProfile() {
+  const l = selectedLab;
+  const card = document.getElementById("profileCard");
+
+  let mapURL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.coordinates || l.area || l.name)}`;
+
+  card.innerHTML = `
+    <button class="btn btn-outline-light mb-3" onclick="goBack()">← Back</button>
+
+    <h2 class="text-center mb-4">${l.name || "Lab Details"}</h2>
+
+    <p><strong>📍 Area:</strong> ${l.area || "-"}</p>
+    <p><strong>📌 Coordinates:</strong> ${l.coordinates || "-"}</p>
+    <p><strong>🧪 Tests:</strong> ${l.tests || "Blood Test, CBC, Lipid Profile, Thyroid Test"}</p>
+    <p><strong>📞 Contact:</strong> ${l.contact || "-"}</p>
+    <p><strong>📧 Email:</strong> ${l.email || "-"}</p>
+    <p class="rating"><strong>⭐ Rating:</strong> ${l.rating || 0}</p>
+
+    <p>
+      <strong>🗺 Google Map:</strong>
+      <a href="${mapURL}" target="_blank" class="text-info">Open Location</a>
+    </p>
+  `;
+}
+
+window.goBack = () => {
+  document.getElementById("labList").style.display = "flex";
+  document.getElementById("profileView").style.display = "none";
+};
+
+loadLabs();
+
+</script>
+
+<!-- PARTICLES -->
+<script>
+particlesJS("particles-js", {
+particles: {
+number: { value: 80 },
+color: { value: "#ffffff" },
+opacity: { value: 0.35 },
+size: { value: 2 },
+line_linked: {
+enable: true,
+distance: 130,
+color: "#888888",
+opacity: 0.25
+},
+move: { enable: true, speed: 1.1 }
+},
+interactivity: {
+events: { onhover: { enable: true, mode: "grab" } }
+},
+retina_detect: true
+});
+</script>
+
+</body>
+</html>

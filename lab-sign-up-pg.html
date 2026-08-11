@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Lab Registration | Healthify</title>
+<link rel="icon" type="image/png" href="logo.png">
+
+<link rel="stylesheet" href="css/bootstrap.min.css">
+
+<!-- Particles -->
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    background: #0d0d0d;
+}
+
+/* BACKGROUND */
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0f0f0f, #2b2b2b);
+    z-index: -1;
+}
+
+/* FORM CARD */
+.form-box {
+    background: rgba(0,0,0,0.85);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 18px;
+    padding: 30px;
+    margin-top: 100px;
+    box-shadow: 0 0 25px rgba(255,255,255,0.15);
+}
+
+/* INPUT DARK FIX */
+input, select, textarea {
+    background: black !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.35) !important;
+}
+
+input::placeholder {
+    color: #bbb !important;
+}
+
+input:focus, select:focus, textarea:focus {
+    background: black !important;
+    color: white !important;
+    border-color: white !important;
+    box-shadow: none !important;
+}
+
+/* FILE INPUT */
+input[type="file"] {
+    background: black !important;
+    color: white !important;
+}
+
+/* BUTTON */
+.btn-custom {
+    background: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 10px 25px;
+    border-radius: 10px;
+}
+
+.btn-custom:hover {
+    background: white;
+    color: black;
+}
+</style>
+</head>
+
+<body>
+
+<div id="particles-js"></div>
+
+<div class="container">
+<div class="row justify-content-center">
+<div class="col-md-7">
+
+<div class="form-box">
+
+<div class="text-center mb-3">
+  <img src="logo.png" width="55" height="55" class="rounded-circle" alt="Healthify Logo">
+</div>
+<h3 class="text-center mb-4">🧪 Lab Registration</h3>
+
+<form id="labForm">
+
+<!-- Lab Name -->
+<div class="mb-3">
+<label>Lab Name</label>
+<input type="text" class="form-control" id="labName" required>
+</div>
+
+<!-- Contact -->
+<div class="mb-3">
+<label>Contact Number</label>
+<input type="tel" class="form-control" id="contact" required>
+</div>
+
+<!-- Email -->
+<div class="mb-3">
+<label>Email</label>
+<input type="email" class="form-control" id="email" required>
+</div>
+
+<!-- Coordinates -->
+<div class="mb-3">
+<label>Google Map Coordinates</label>
+<input type="text" class="form-control" id="coordinates" placeholder="Latitude, Longitude" required>
+</div>
+
+<!-- Area -->
+<div class="mb-3">
+<label>Area / Location</label>
+<input type="text" class="form-control" id="area" required>
+</div>
+
+<!-- Buttons -->
+<div class="text-center mt-4">
+<button type="submit" class="btn btn-custom">Submit</button>
+<button type="reset" class="btn btn-custom ms-3">Reset</button>
+</div>
+
+</form>
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- FIREBASE SAVE -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAYzmBXm6U3Mwrq1vXCBk9Nlt85ydVGQpc",
+  authDomain: "healtify-cd401.firebaseapp.com",
+  projectId: "healtify-cd401"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+document.getElementById("labForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    try {
+        await addDoc(collection(db, "newlab"), {
+            name: document.getElementById("labName").value,
+            contact: document.getElementById("contact").value,
+            email: document.getElementById("email").value,
+            coordinates: document.getElementById("coordinates").value,
+            area: document.getElementById("area").value,
+            createdAt: Date.now()
+        });
+    } catch (err) {
+        console.warn("Lab registration submission fallback:", err);
+    }
+
+    alert("Thank you for choosing our platform; we are honored to work with you. Once you are registered on our website, we will send you the required details that you need to know. Thank you once again for choosing our platform.");
+    this.reset();
+});
+</script>
+
+<!-- PARTICLES -->
+<script>
+particlesJS("particles-js", {
+particles: {
+number: { value: 80 },
+color: { value: "#ffffff" },
+shape: { type: "circle" },
+opacity: { value: 0.5 },
+size: { value: 3 },
+line_linked: {
+enable: true,
+distance: 150,
+color: "#ffffff",
+opacity: 0.35,
+width: 1
+},
+move: { enable: true, speed: 1.5 }
+},
+interactivity: {
+events: { onhover: { enable: true, mode: "grab" } }
+},
+retina_detect: true
+});
+</script>
+
+</body>
+</html>

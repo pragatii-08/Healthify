@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Healthify | Admin Dashboard</title>
+<link rel="icon" type="image/png" href="logo.png">
+
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<script src="js/bootstrap.bundle.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    background: #0d0d0d;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0f0f0f, #2b2b2b);
+    z-index: -1;
+}
+
+.navbar {
+    background: rgba(0,0,0,0.9);
+    border-bottom: 1px solid #555;
+}
+
+.btn-custom {
+    background: transparent;
+    border: 2px solid white;
+    color: white;
+    padding: 10px 22px;
+    font-size: 17px;
+    border-radius: 12px;
+}
+
+.btn-custom:hover {
+    background: white;
+    color: black;
+}
+
+.section-title {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 14px;
+    font-size: 20px;
+    color: #00cfff;
+}
+
+.side-panel {
+    position: fixed;
+    top: 80px;
+    right: -35%;
+    width: 33%;
+    height: 85%;
+    background: rgba(0,0,0,0.95);
+    border-left: 2px solid #00cfff;
+    padding: 18px;
+    overflow-y: auto;
+    transition: 0.3s ease-in-out;
+    border-radius: 12px 0 0 12px;
+}
+
+.side-panel.show {
+    right: 0;
+}
+
+.close-btn {
+    float: right;
+    border: none;
+    background: red;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="particles-js"></div>
+
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+<div class="container">
+<a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="home-pg.html">
+  <img src="logo.png" width="35" height="35" class="rounded-circle" alt="Healthify Logo">
+  <span>Healthify Admin</span>
+</a>
+</div>
+</nav>
+
+<br><br><br>
+
+<div class="container mt-4">
+
+<h2 class="text-center mb-4">Admin Dashboard</h2>
+
+<h5 class="section-title">Add & Approve Requests</h5>
+<div class="d-flex justify-content-center gap-3 mb-4 flex-wrap">
+
+<button class="btn btn-custom" onclick="openPanel('doctor')">
+<i class="bi bi-person-plus"></i> Add Doctor
+</button>
+
+
+<button class="btn btn-custom" onclick="openPanel('lab')">
+<i class="bi bi-flask"></i> Add Lab
+</button>
+
+</div>
+
+<h5 class="section-title">Doctor Rating Management</h5>
+<div class="d-flex justify-content-center gap-3 mb-4 flex-wrap">
+
+<button class="btn btn-custom" onclick="openPanel('top')">
+<i class="bi bi-star-fill"></i> Top 10 Highest Rated Doctors
+</button>
+
+<button class="btn btn-custom" onclick="openPanel('low')">
+<i class="bi bi-exclamation-triangle"></i> Lowest Rated Doctors
+</button>
+
+</div>
+
+<h5 class="section-title">Doctor Booking Count</h5>
+<p id="bookingCount" class="text-center fw-bold"></p>
+
+</div>
+
+<div id="sidePanel" class="side-panel">
+
+<button class="close-btn" onclick="closePanel()">Close ✖</button>
+
+<h4 id="panelTitle" class="mb-3 mt-3"></h4>
+<ul id="panelList" class="list-group mb-3"></ul>
+<button id="panelAction" class="btn btn-success w-100"></button>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAYzmBXm6U3Mwrq1vXCBk9Nlt85ydVGQpc",
+  authDomain: "healtify-cd401.firebaseapp.com",
+  projectId: "healtify-cd401"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.closePanel = () => {
+  document.getElementById("sidePanel").classList.remove("show");
+};
+
+const defaultNewDoctors = [
+  { id: "nd1", name: "Dr. Suresh Kumar", age: "32", experience: "5", expertise: "General Physician", contact: "+919866677788", email: "suresh.kumar@gmail.com" },
+  { id: "nd2", name: "Dr. Meera Iyer", age: "38", experience: "9", expertise: "Gynecology", contact: "+919877788899", email: "meera.iyer@gmail.com" },
+  { id: "nd3", name: "Dr. Rohan Gupta", age: "35", experience: "7", expertise: "Ophthalmology", contact: "+919888899900", email: "rohan.gupta@gmail.com" },
+  { id: "nd4", name: "Dr. Neha Sharma", age: "31", experience: "4", expertise: "ENT Specialist", contact: "+919899900011", email: "neha.sharma@gmail.com" },
+  { id: "nd5", name: "Dr. Alok Pandey", age: "43", experience: "11", expertise: "Psychiatry", contact: "+919900011122", email: "alok.pandey@gmail.com" }
+];
+
+const defaultNewLabs = [
+  { id: "nl1", name: "Apex Clinical Laboratory", area: "Salt Lake, Kolkata", contact: "+919966677788", email: "info@apexlab.com" },
+  { id: "nl2", name: "CareVision Diagnostics", area: "Satellite, Ahmedabad", contact: "+919977788899", email: "support@carevision.com" },
+  { id: "nl3", name: "HealthCheck Pathology Lab", area: "Hazratganj, Lucknow", contact: "+919988899900", email: "admin@healthchecklab.com" },
+  { id: "nl4", name: "Precision Diagnostic Center", area: "T. Nagar, Chennai", contact: "+919999900011", email: "contact@precisionlab.com" },
+  { id: "nl5", name: "Lifecare PathLab", area: "Raja Park, Jaipur", contact: "+919900099988", email: "service@lifecarelab.com" }
+];
+
+// COUNT BOOKINGS
+async function loadBookingCount() {
+  try {
+    const snap = await getDocs(collection(db, "bookings"));
+    document.getElementById("bookingCount").innerText =
+      "Total Doctor Bookings: " + (snap.size || 5);
+  } catch (e) {
+    document.getElementById("bookingCount").innerText = "Total Doctor Bookings: 5";
+  }
+}
+loadBookingCount();
+
+window.openPanel = async (type) => {
+
+  const panel = document.getElementById("sidePanel");
+  const title = document.getElementById("panelTitle");
+  const list = document.getElementById("panelList");
+  const btn = document.getElementById("panelAction");
+
+  panel.classList.add("show");
+  list.innerHTML = "";
+  btn.onclick = null;
+
+  // DOCTOR APPROVAL
+  if (type === "doctor") {
+    title.innerText = "Approve Doctor Requests";
+    btn.innerText = "Approve Selected Doctors";
+
+    let docsList = [];
+    try {
+      const snap = await getDocs(collection(db, "newdoctor"));
+      snap.forEach(docSnap => docsList.push({ id: docSnap.id, ...docSnap.data() }));
+    } catch (e) {}
+
+    if (docsList.length === 0) docsList = defaultNewDoctors;
+
+    docsList.forEach(d => {
+      list.innerHTML += `
+        <li class="list-group-item bg-dark text-light">
+          <input type="checkbox" class="approveDoctor" data-id="${d.id}">
+          <strong>${d.name}</strong><br>
+          Age: ${d.age} | Exp: ${d.experience} yrs<br>
+          Expertise: ${d.expertise}<br>
+          Contact: ${d.contact}<br>
+          Email: ${d.email}
+        </li>
+      `;
+    });
+
+    btn.onclick = async () => {
+      const selected = document.querySelectorAll(".approveDoctor:checked");
+
+      for (const box of selected) {
+        const ref = doc(db, "newdoctor", box.dataset.id);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          const info = snap.data();
+
+          await addDoc(collection(db, "doctor"), {
+            ...info,
+            rating: 0,
+            createdAt: Date.now()
+          });
+
+          await deleteDoc(ref);
+        }
+      }
+
+      openPanel("doctor");
+    };
+  }
+
+  // PHARMACY APPROVAL
+  if (type === "pharmacy") {
+    title.innerText = "Approve Pharmacy Requests";
+    btn.innerText = "Approve Selected Pharmacies";
+
+    const snap = await getDocs(collection(db, "newpharmacy"));
+
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      list.innerHTML += `
+        <li class="list-group-item bg-dark text-light">
+          <input type="checkbox" class="approvePharmacy" data-id="${docSnap.id}">
+          <strong>${d.name}</strong><br>
+          Area: ${d.area}<br>
+          Contact: ${d.contact}<br>
+          Email: ${d.email}<br>
+          Mode: ${d.mode}
+        </li>
+      `;
+    });
+
+    btn.onclick = async () => {
+      const selected = document.querySelectorAll(".approvePharmacy:checked");
+
+      for (const box of selected) {
+        const ref = doc(db, "newpharmacy", box.dataset.id);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          const info = snap.data();
+
+          await addDoc(collection(db, "pharmacy"), {
+            ...info,
+            rating: 0,
+            createdAt: Date.now()
+          });
+
+          await deleteDoc(ref);
+        }
+      }
+
+      openPanel("pharmacy");
+    };
+  }
+
+  // LAB APPROVAL
+  if (type === "lab") {
+    title.innerText = "Approve Lab Requests";
+    btn.innerText = "Approve Selected Labs";
+
+    let labsList = [];
+    try {
+      const snap = await getDocs(collection(db, "newlab"));
+      snap.forEach(docSnap => labsList.push({ id: docSnap.id, ...docSnap.data() }));
+    } catch (e) {}
+
+    if (labsList.length === 0) labsList = defaultNewLabs;
+
+    labsList.forEach(d => {
+      list.innerHTML += `
+        <li class="list-group-item bg-dark text-light">
+          <input type="checkbox" class="approveLab" data-id="${d.id}">
+          <strong>${d.name}</strong><br>
+          Area: ${d.area}<br>
+          Contact: ${d.contact}<br>
+          Email: ${d.email}
+        </li>
+      `;
+    });
+
+    btn.onclick = async () => {
+      const selected = document.querySelectorAll(".approveLab:checked");
+
+      for (const box of selected) {
+        const ref = doc(db, "newlab", box.dataset.id);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          const info = snap.data();
+
+          await addDoc(collection(db, "lab"), {
+            ...info,
+            rating: 0,
+            createdAt: Date.now()
+          });
+
+          await deleteDoc(ref);
+        }
+      }
+
+      openPanel("lab");
+    };
+  }
+
+  // LOW RATED DOCTORS
+  if (type === "low") {
+    title.innerText = "Doctors With Rating ≤ 4";
+    btn.innerText = "Remove Selected Doctors";
+
+    const snap = await getDocs(collection(db, "doctor"));
+
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      if (d.rating <= 4) {
+        list.innerHTML += `
+          <li class="list-group-item bg-dark text-light">
+            <input type="checkbox" class="removeBox" data-id="${docSnap.id}">
+            ${d.name} — Rating: ${d.rating}
+          </li>
+        `;
+      }
+    });
+
+    btn.onclick = async () => {
+      document.querySelectorAll(".removeBox:checked").forEach(async box => {
+        await deleteDoc(doc(db, "doctor", box.dataset.id));
+      });
+
+      openPanel("low");
+    };
+  }
+
+  // TOP 10 DOCTORS
+  if (type === "top") {
+    title.innerText = "Top 10 Highest Rated Doctors";
+    btn.innerText = "Close Panel";
+
+    const snap = await getDocs(collection(db, "doctor"));
+    let docs = [];
+
+    snap.forEach(docSnap => docs.push(docSnap.data()));
+
+    docs.sort((a,b)=>b.rating-a.rating).slice(0,10).forEach(d => {
+      list.innerHTML += `
+        <li class="list-group-item bg-dark text-light">
+          ${d.name} — Rating: ${d.rating}
+        </li>
+      `;
+    });
+
+    btn.onclick = closePanel;
+  }
+};
+
+</script>
+
+<script>
+particlesJS("particles-js", {
+particles: {
+number: { value: 80 },
+color: { value: "#ffffff" },
+opacity: { value: 0.5 },
+size: { value: 3 },
+line_linked: {
+enable: true,
+distance: 150,
+color: "#ffffff",
+opacity: 0.35
+},
+move: { enable: true, speed: 1.5 }
+},
+interactivity: {
+events: { onhover: { enable: true, mode: "grab" } }
+},
+retina_detect: true
+});
+</script>
+
+</body>
+</html>

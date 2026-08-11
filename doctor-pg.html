@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Healthify | Doctors</title>
+<link rel="icon" type="image/png" href="logo.png">
+
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    background: #0d0d0d;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.navbar {
+    background: rgba(0,0,0,0.95);
+    border-bottom: 1px solid #444;
+}
+
+.filter-select {
+    background: #000;
+    border: 1px solid white;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 12px;
+}
+
+.filter-select option {
+    background: #000;
+    color: white;
+}
+
+.doctor-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 30px;
+    justify-content: center;
+}
+
+.doctor-mini {
+    width: 230px;
+    height: 190px;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.doctor-mini:hover {
+    transform: scale(1.05);
+    border-color: #00cfff;
+}
+
+.rating {
+    color: gold;
+    font-weight: bold;
+}
+
+.profile-view {
+    display: none;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.profile-card {
+    width: 520px;
+    height: 600px;
+    margin: 40px auto;
+    background: rgba(0,0,0,0.9);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 18px;
+    padding: 25px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.payment-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.payment-box {
+    background: #111;
+    border: 1px solid #00cfff;
+    padding: 25px;
+    border-radius: 16px;
+    width: 360px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="particles-js"></div>
+
+<nav class="navbar navbar-dark px-3 d-flex justify-content-between">
+<span class="navbar-brand fw-bold d-flex align-items-center gap-2">
+  <img src="logo.png" width="35" height="35" class="rounded-circle" alt="Healthify Logo">
+  <span>🩺 Doctors</span>
+</span>
+
+<div class="d-flex gap-2">
+<select id="categoryFilter" class="filter-select" onchange="applyFilters()">
+  <option value="all">🩺 All Categories</option>
+  <option value="general">General</option>
+  <option value="child">Child Specialist</option>
+  <option value="dermatology">Dermatology</option>
+  <option value="physician">Physician</option>
+  <option value="orthopedic">Orthopedic</option>
+</select>
+
+<select id="ratingFilter" class="filter-select" onchange="applyFilters()">
+  <option value="high">⭐ High → Low</option>
+  <option value="low">⭐ Low → High</option>
+</select>
+
+<select id="genderFilter" class="filter-select" onchange="applyFilters()">
+  <option value="all">👨‍⚕️ Both</option>
+  <option value="male">Male</option>
+  <option value="female">Female</option>
+</select>
+</div>
+</nav>
+
+<div id="doctorList" class="doctor-row"></div>
+
+<div id="profileView" class="profile-view">
+  <div id="profileCard" class="profile-card"></div>
+</div>
+
+<!-- ✅ UPDATED PAYMENT MODAL -->
+<div id="paymentModal" class="payment-modal">
+  <div class="payment-box">
+    <h4>💳 Complete Payment</h4>
+
+    <label>Total Amount</label>
+    <input type="text" id="paymentAmountInput" class="form-control mb-2" disabled>
+
+    <label>Name of Payer</label>
+    <input type="text" id="payerName" required class="form-control mb-2"
+           oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')">
+
+    <label>UPI / Card Number</label>
+    <input type="text" id="paymentRef" required class="form-control mb-2"
+           maxlength="10"
+           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+    <label>PIN</label>
+    <input type="password" required id="pinInput" class="form-control mb-3"
+           maxlength="4"
+           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-success w-50" onclick="completePayment()">Pay Now</button>
+      <button class="btn btn-danger w-50" onclick="closePayment()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  doc,
+  getDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAYzmBXm6U3Mwrq1vXCBk9Nlt85ydVGQpc",
+  authDomain: "healtify-cd401.firebaseapp.com",
+  projectId: "healtify-cd401"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const defaultDoctors = [
+  { id: "doc1", name: "Dr. Ananya Roy", age: "42", gender: "female", contact: "+919811122233", email: "ananya.roy@healthify.com", experience: "12", expertise: "Cardiology", regNo: "MC10234", stateCouncil: "Maharashtra Medical Council", rating: 4.9, bookings: 142 },
+  { id: "doc2", name: "Dr. Rajesh Mehta", age: "48", gender: "male", contact: "+919822233344", email: "rajesh.mehta@healthify.com", experience: "15", expertise: "Neurology", regNo: "MC10567", stateCouncil: "Delhi Medical Council", rating: 4.8, bookings: 128 },
+  { id: "doc3", name: "Dr. Sunita Rao", age: "36", gender: "female", contact: "+919833344455", email: "sunita.rao@healthify.com", experience: "8", expertise: "Pediatrics", regNo: "MC10890", stateCouncil: "Karnataka Medical Council", rating: 4.7, bookings: 95 },
+  { id: "doc4", name: "Dr. Vikramaditya Joshi", age: "40", gender: "male", contact: "+919844455566", email: "vikram.joshi@healthify.com", experience: "10", expertise: "Orthopedics", regNo: "MC11223", stateCouncil: "Gujarat Medical Council", rating: 4.6, bookings: 110 },
+  { id: "doc5", name: "Dr. Kavita Nair", age: "34", gender: "female", contact: "+919855566677", email: "kavita.nair@healthify.com", experience: "6", expertise: "Dermatology", regNo: "MC11556", stateCouncil: "Tamil Nadu Medical Council", rating: 4.5, bookings: 87 }
+];
+
+let doctors = [];
+let filteredDoctors = [];
+let selectedDoctor = null;
+let pendingBooking = null;
+
+/* LOAD DOCTORS */
+async function loadDoctors() {
+  try {
+    const snap = await getDocs(collection(db, "doctors"));
+    doctors = [];
+    snap.forEach(d => doctors.push({ id: d.id, ...d.data() }));
+    if (doctors.length === 0) {
+      const snap2 = await getDocs(collection(db, "doctor"));
+      snap2.forEach(d => doctors.push({ id: d.id, ...d.data() }));
+    }
+  } catch (err) {
+    console.warn("Firestore fallback to default doctors:", err);
+  }
+  if (!doctors || doctors.length === 0) {
+    doctors = [...defaultDoctors];
+  }
+  applyFilters();
+}
+
+/* FILTERS */
+window.applyFilters = () => {
+  const gender = document.getElementById("genderFilter").value;
+  const ratingOrder = document.getElementById("ratingFilter").value;
+  const category = document.getElementById("categoryFilter").value;
+
+  filteredDoctors = doctors.filter(d => {
+    let genderMatch = gender === "all" || (d.gender || "").toLowerCase() === gender;
+    let categoryMatch = category === "all" || (d.expertise || "").toLowerCase().includes(category);
+    return genderMatch && categoryMatch;
+  });
+
+  filteredDoctors.sort((a, b) =>
+    ratingOrder === "high" ? b.rating - a.rating : a.rating - b.rating
+  );
+
+  renderDoctors();
+};
+
+/* RENDER DOCTORS */
+function renderDoctors() {
+  const list = document.getElementById("doctorList");
+  list.innerHTML = "";
+  list.style.display = "flex";
+  document.getElementById("profileView").style.display = "none";
+
+  filteredDoctors.forEach((d, i) => {
+    list.innerHTML += `
+      <div class="doctor-mini" onclick="openProfile(${i})">
+        <h5>${d.name}</h5>
+        <p class="rating">⭐ ${d.rating}</p>
+        <small>${d.expertise}</small>
+      </div>
+    `;
+  });
+}
+
+/* OPEN PROFILE */
+window.openProfile = (i) => {
+  selectedDoctor = filteredDoctors[i];
+  document.getElementById("doctorList").style.display = "none";
+  document.getElementById("profileView").style.display = "block";
+  renderProfile();
+};
+
+/* PROFILE */
+function renderProfile() {
+  const d = selectedDoctor;
+  const card = document.getElementById("profileCard");
+
+  card.innerHTML = `
+    <button class="btn btn-outline-light mb-3" onclick="goBack()">← Back</button>
+
+    <div class="text-center">
+      <h3>${d.name}</h3>
+      <p>Age: ${d.age}</p>
+      <p>Experience: ${d.experience} years</p>
+      <p>Expertise: ${d.expertise}</p>
+      <p>Gender: ${d.gender}</p>
+      <p class="rating">⭐ Rating: ${d.rating}</p>
+    </div>
+
+    <hr>
+
+    <h5>📅 Book Appointment</h5>
+
+    <label>Date</label>
+    <select id="dateSelect" class="form-control mb-2"></select>
+
+    <label>Time</label>
+    <select id="timeSelect" class="form-control mb-2"></select>
+
+    <label>Payment Mode</label>
+    <select id="paymentMode" class="form-control mb-3">
+      <option value="online">Online (Pay Full)</option>
+      <option value="offline">Offline (Pay Later)</option>
+    </select>
+
+    <button class="btn btn-success w-100" onclick="confirmBooking()">Confirm</button>
+  `;
+
+  loadDates();
+  loadTimes();
+}
+
+/* LOAD DATES */
+function loadDates() {
+  const dateSelect = document.getElementById("dateSelect");
+  dateSelect.innerHTML = "";
+  for (let i = 0; i < 7; i++) {
+    let d = new Date();
+    d.setDate(d.getDate() + i);
+    dateSelect.innerHTML += `<option>${d.toISOString().split('T')[0]}</option>`;
+  }
+}
+
+/* LOAD TIMES */
+function loadTimes() {
+  const timeSelect = document.getElementById("timeSelect");
+  timeSelect.innerHTML = "";
+  ["10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM"]
+    .forEach(t => timeSelect.innerHTML += `<option>${t}</option>`);
+}
+
+/* CONFIRM BOOKING */
+window.confirmBooking = async () => {
+  const date = document.getElementById("dateSelect").value;
+  const time = document.getElementById("timeSelect").value;
+  const mode = document.getElementById("paymentMode").value;
+
+  const bookingId = `${selectedDoctor.id}_${date}_${time.replace(/[: ]/g,'')}`;
+  const bookingRef = doc(db, "bookings", bookingId);
+  const snap = await getDoc(bookingRef);
+
+  if (snap.exists()) {
+    alert("❌ This slot is already booked!");
+    return;
+  }
+
+  pendingBooking = { date, time, mode, bookingId };
+
+  if (mode === "online") {
+    openPayment();
+  } else {
+    await saveBooking(false);
+    alert("✅ Booking Confirmed (Pay at Clinic)");
+    goBack();
+  }
+};
+
+/* PAYMENT */
+function openPayment() {
+  let price = 2000 + (selectedDoctor.rating * 300);
+  document.getElementById("paymentAmountInput").value = "₹" + price;
+  document.getElementById("paymentModal").style.display = "flex";
+}
+
+window.closePayment = () => {
+  document.getElementById("paymentModal").style.display = "none";
+};
+
+/* ✅ UPDATED VALIDATION */
+window.completePayment = async () => {
+  const payer = document.getElementById("payerName").value.trim();
+  const ref = document.getElementById("paymentRef").value.trim();
+  const pin = document.getElementById("pinInput").value.trim();
+
+  if (!/^[A-Za-z ]+$/.test(payer)) {
+    alert("❌ Payer name must contain only alphabets.");
+    return;
+  }
+
+  if (!/^[0-9]{8,10}$/.test(ref)) {
+    alert("❌ UPI/Card number must be 8 to 10 digits only.");
+    return;
+  }
+
+  if (!/^[0-9]{4}$/.test(pin)) {
+    alert("❌ PIN must be exactly 4 digits.");
+    return;
+  }
+
+  await saveBooking(true);
+  closePayment();
+  alert("✅ Payment Successful & Slot Booked!");
+  goBack();
+};
+
+/* SAVE BOOKING */
+async function saveBooking(paymentDone) {
+  const bookingRef = doc(db, "bookings", pendingBooking.bookingId);
+
+  await setDoc(bookingRef, {
+    doctorId: selectedDoctor.id,
+    doctorName: selectedDoctor.name,
+    date: pendingBooking.date,
+    time: pendingBooking.time,
+    mode: pendingBooking.mode,
+    paymentDone,
+    status: "booked",
+    createdAt: new Date()
+  });
+}
+
+window.goBack = () => {
+  document.getElementById("doctorList").style.display = "flex";
+  document.getElementById("profileView").style.display = "none";
+};
+
+loadDoctors();
+</script>
+
+<script>
+particlesJS("particles-js", {
+particles: {
+number: { value: 70 },
+opacity: { value: 0.3 },
+size: { value: 2 },
+line_linked: { enable: true, distance: 120, opacity: 0.2 },
+move: { speed: 1 }
+},
+retina_detect: true
+});
+</script>
+
+</body>
+</html>

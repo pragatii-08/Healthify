@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Healthify | Bookings & Cart</title>
+<link rel="icon" type="image/png" href="logo.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+<style>
+body {
+    background:#0d0d0d;
+    color:white;
+    font-family:'Segoe UI', sans-serif;
+    margin: 0;
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.navbar {
+    background: rgba(0,0,0,0.95);
+    border-bottom: 1px solid #444;
+}
+
+.nav-tabs .nav-link {
+    color: white;
+}
+
+.nav-tabs .nav-link.active {
+    background: #00cfff;
+    color: black;
+    font-weight: bold;
+}
+
+.booking-card {
+    background: rgba(0,0,0,0.75);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    transition: 0.3s;
+}
+
+.booking-card:hover {
+    border-color: #00cfff;
+    transform: translateY(-4px);
+}
+
+.cancel-btn {
+    border: 1px solid red;
+    color: red;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 10px;
+    transition: 0.3s;
+}
+
+.cancel-btn:hover {
+    background: red;
+    color: white;
+}
+</style>
+</head>
+
+<body>
+
+<div id="particles-js"></div>
+
+<nav class="navbar navbar-dark px-3 d-flex justify-content-between">
+<span class="navbar-brand fw-bold d-flex align-items-center gap-2">
+  <img src="logo.png" width="35" height="35" class="rounded-circle" alt="Healthify Logo">
+  <span>📋 My Bookings</span>
+</span>
+</nav>
+
+<div class="container mt-4">
+
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <button class="nav-link active" onclick="showTab(event,'current')">Current</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" onclick="showTab(event,'cancelled')">Cancelled</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" onclick="showTab(event,'completed')">Completed</button>
+  </li>
+</ul>
+
+<div id="bookingList"></div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  doc, 
+  updateDoc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAYzmBXm6U3Mwrq1vXCBk9Nlt85ydVGQpc",
+  authDomain: "healtify-cd401.firebaseapp.com",
+  projectId: "healtify-cd401"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let allBookings = [];
+let activeTab = "current";
+
+/* LOAD BOOKINGS */
+async function loadBookings() {
+  const snap = await getDocs(collection(db, "bookings"));
+  allBookings = [];
+
+  snap.forEach(docSnap => {
+    allBookings.push({ id: docSnap.id, ...docSnap.data() });
+  });
+
+  renderBookings();
+}
+
+/* TAB SWITCH */
+window.showTab = (e, tab) => {
+  activeTab = tab;
+
+  document.querySelectorAll(".nav-link").forEach(btn => 
+    btn.classList.remove("active")
+  );
+
+  e.target.classList.add("active");
+  renderBookings();
+};
+
+/* RENDER BOOKINGS */
+function renderBookings() {
+  const list = document.getElementById("bookingList");
+  list.innerHTML = "";
+
+  const today = new Date().toISOString().split("T")[0];
+
+  let filtered = allBookings.filter(b => {
+
+    if (activeTab === "current") {
+      return b.status === "booked" && b.date >= today;
+    }
+
+    if (activeTab === "cancelled") {
+      return b.status === "cancelled";
+    }
+
+    if (activeTab === "completed") {
+      return b.status === "completed" || 
+             (b.status === "booked" && b.date < today);
+    }
+
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = "<p class='text-muted'>No records found.</p>";
+    return;
+  }
+
+  filtered.forEach(b => {
+
+    let price = 2000 + (b.rating ? b.rating * 300 : 0);
+    let paymentText = b.paymentDone ? "Paid Online" : "Pay at Clinic";
+
+    list.innerHTML += `
+      <div class="booking-card">
+        <h5>${b.doctorName || "Doctor"}</h5>
+        <p><strong>Date:</strong> ${b.date || "-"}</p>
+        <p><strong>Time:</strong> ${b.time || "-"}</p>
+        <p><strong>Payment Mode:</strong> ${b.mode || "-"}</p>
+        <p><strong>Payment Status:</strong> ${paymentText}</p>
+        <p><strong>Amount:</strong> ₹${price}</p>
+        <p><strong>Status:</strong> ${b.status}</p>
+
+        ${activeTab === "current" ? 
+        `<button class="cancel-btn mt-2" onclick="cancelBooking('${b.id}')">
+            Cancel Booking
+         </button>` : ``}
+      </div>
+    `;
+  });
+}
+
+/* CANCEL BOOKING */
+window.cancelBooking = async (id) => {
+  const bookingRef = doc(db, "bookings", id);
+  await updateDoc(bookingRef, {
+    status: "cancelled"
+  });
+  loadBookings();
+};
+
+loadBookings();
+
+</script>
+
+<script>
+particlesJS("particles-js", {
+particles: {
+number: { value: 90 },
+opacity: { value: 0.35 },
+size: { value: 2 },
+line_linked: {
+enable: true,
+distance: 130,
+opacity: 0.25
+},
+move: { speed: 1.1 }
+},
+retina_detect: true
+});
+</script>
+
+</body>
+</html>
